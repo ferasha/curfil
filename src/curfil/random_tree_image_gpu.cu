@@ -182,7 +182,20 @@ FeatureResponseType calculateColorFeature(int imageNr,
     if (isnan(b))
         return b;
 
-    return (a - b);
+    //to simulate flipping the images horizontally
+    FeatureResponseType c = averageRegionColor(imageNr, imageWidth, imageHeight, channel1, depth, sampleX, sampleY,
+            -offset1X, offset1Y, region1X, region1Y);
+
+    if (isnan(c))
+        return c;
+
+    FeatureResponseType d = averageRegionColor(imageNr, imageWidth, imageHeight, channel2, depth, sampleX, sampleY,
+            -offset2X, offset2Y, region2X, region2Y);
+
+    if (isnan(d))
+        return d;
+
+    return (a - b) + (c - d);
 }
 
 __global__

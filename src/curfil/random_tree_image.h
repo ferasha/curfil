@@ -502,7 +502,17 @@ private:
         if (isnan(b))
             return b;
 
-        return (a - b);
+        FeatureResponseType c = instance.averageRegionColor(Offset(-offset1.getX(),offset1.getY()).normalize(depth), region1.normalize(depth),
+                channel1);
+        if (isnan(c))
+            return c;
+
+        FeatureResponseType d = instance.averageRegionColor(Offset(-offset2.getX(),offset2.getY()).normalize(depth), region2.normalize(depth),
+                channel2);
+        if (isnan(d))
+            return d;
+
+        return (a - b) + (c - d);
     }
 
     FeatureResponseType calculateDepthFeature(const PixelInstance& instance) const {
