@@ -76,12 +76,16 @@ public:
     }
 
     // Return left or right branch for a given instance and feature function.
-    SplitBranch split(const Instance& instance) const {
-    	double value1 = feature.calculateFeatureResponse(instance,false);
-    	double value2 = feature.calculateFeatureResponse(instance,true);
-    	 return (((!(value1 <= getThreshold()) + !(value2 <= getThreshold())) <= 1) ? LEFT : RIGHT);
-    	// return (feature.calculateFeatureResponse(instance,flipRegion) <= getThreshold() ? LEFT : RIGHT);
-    }
+	SplitBranch split(const Instance& instance) const {
+		double value1, value2;
+		value1 = feature.calculateFeatureResponse(instance, false);
+		if (feature.getTypeString() == "color") {
+			value2 = feature.calculateFeatureResponse(instance, true);
+			return (((!(value1 <= getThreshold()) + !(value2 <= getThreshold())) <= 1) ? LEFT : RIGHT);
+		} else
+			return (!(value1 <= getThreshold()) ? LEFT : RIGHT);
+		// return (feature.calculateFeatureResponse(instance,flipRegion) <= getThreshold() ? LEFT : RIGHT);
+	}
 
     // Return the underlying feature used
     const FeatureFunction& getFeature() const {

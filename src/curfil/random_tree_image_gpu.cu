@@ -320,7 +320,6 @@ void generateRandomFeaturesKernel(int seed,
         FeatureResponseType featureResponse;
         switch (type) {
             case COLOR:
-            	if (thresh < numThresholds/2)
                 featureResponse = calculateColorFeature(imageNumbers[numSample],
                         imageWidth, imageHeight,
                         offset1X, offset1Y,
@@ -329,15 +328,6 @@ void generateRandomFeaturesKernel(int seed,
                         region2X, region2Y,
                         channel1, channel2,
                         sampleX[numSample], sampleY[numSample], depths[numSample]);
-            	else
-                    featureResponse = calculateColorFeature(imageNumbers[numSample],
-                            imageWidth, imageHeight,
-                            -offset1X, offset1Y,
-                            -offset2X, offset2Y,
-                            region1X, region1Y,
-                            region2X, region2Y,
-                            channel1, channel2,
-                            sampleX[numSample], sampleY[numSample], depths[numSample]);
                 break;
             case DEPTH:
                 featureResponse = calculateDepthFeature(imageNumbers[numSample],
@@ -1319,11 +1309,12 @@ __global__ void classifyKernel(
         float threshold = getThreshold(currentNodeOffset, tree);
         assert(!isnan(threshold));
 
-        //TODO:do this only for the color type feature not the depth too, also should be changed in aggregatehistogram
-        int tempValue = static_cast<int>(!(featureResponse1 <= threshold)) + static_cast<int>(!(featureResponse2 <= threshold));
-        int value = ((tempValue <= 1) ? 0 : 1);
-
-      //  int value = static_cast<int>(!(featureResponse <= threshold));
+		int value;
+		if (getType(currentNodeOffset, tree) == COLOR) {
+			int tempValue = static_cast<int>(!(featureResponse1 <= threshold)) + static_cast<int>(!(featureResponse2 <= threshold));
+			value = ((tempValue <= 1) ? 0 : 1);
+		} else
+		    value = static_cast<int>(!(featureResponse1 <= threshold));
 
         currentNodeOffset += leftNodeOffset + value;
     }

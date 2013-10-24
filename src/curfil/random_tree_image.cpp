@@ -88,7 +88,14 @@ public:
 
                     // avoid the if () else () branch here by casting the compare into 0 or 1
                     // important: (!(x<=y)) is not the same as (x>y) because of NaNs!
-                    int offset = static_cast<int>(!(value1 <= threshold)) + static_cast<int>(!(value2 <= threshold));
+					int temp_offset, offset;
+					if (featureFunctions[featureNr].getTypeString() == "color") {
+						temp_offset = static_cast<int>(!(value1 <= threshold)) + static_cast<int>(!(value2 <= threshold));
+						offset = (temp_offset <= 1) ? 0 : 1;
+					} else {
+						offset = ((value1 <= threshold) ? 0 : 1);
+					}
+
                    // assert(offset == ((value <= threshold) ? 0 : 1));
                     assert(offset ? 0 : 1);
 
