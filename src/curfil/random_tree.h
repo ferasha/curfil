@@ -77,7 +77,10 @@ public:
 
     // Return left or right branch for a given instance and feature function.
     SplitBranch split(const Instance& instance) const {
-    	 return (feature.calculateFeatureResponse(instance) <= getThreshold() ? LEFT : RIGHT);
+    	double value1 = feature.calculateFeatureResponse(instance,false);
+    	double value2 = feature.calculateFeatureResponse(instance,true);
+    	 return (((!(value1 <= getThreshold()) + !(value2 <= getThreshold())) <= 1) ? LEFT : RIGHT);
+    	// return (feature.calculateFeatureResponse(instance,flipRegion) <= getThreshold() ? LEFT : RIGHT);
     }
 
     // Return the underlying feature used

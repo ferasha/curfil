@@ -181,7 +181,7 @@ FeatureResponseType calculateColorFeature(int imageNr,
 
     if (isnan(b))
         return b;
-
+    /*
     //to simulate flipping the images horizontally
     FeatureResponseType c = averageRegionColor(imageNr, imageWidth, imageHeight, channel1, depth, sampleX, sampleY,
             -offset1X, offset1Y, region1X, region1Y);
@@ -195,7 +195,8 @@ FeatureResponseType calculateColorFeature(int imageNr,
     if (isnan(d))
         return d;
 
-    return (a - b) + (c - d);
+    return (a - b) + (d - c);*/
+    return (a - b);
 }
 
 __global__
@@ -319,6 +320,7 @@ void generateRandomFeaturesKernel(int seed,
         FeatureResponseType featureResponse;
         switch (type) {
             case COLOR:
+            	if (thresh < numThresholds/2)
                 featureResponse = calculateColorFeature(imageNumbers[numSample],
                         imageWidth, imageHeight,
                         offset1X, offset1Y,
@@ -327,6 +329,15 @@ void generateRandomFeaturesKernel(int seed,
                         region2X, region2Y,
                         channel1, channel2,
                         sampleX[numSample], sampleY[numSample], depths[numSample]);
+            	else
+                    featureResponse = calculateColorFeature(imageNumbers[numSample],
+                            imageWidth, imageHeight,
+                            -offset1X, offset1Y,
+                            -offset2X, offset2Y,
+                            region1X, region1Y,
+                            region2X, region2Y,
+                            channel1, channel2,
+                            sampleX[numSample], sampleY[numSample], depths[numSample]);
                 break;
             case DEPTH:
                 featureResponse = calculateDepthFeature(imageNumbers[numSample],
@@ -1270,14 +1281,23 @@ __global__ void classifyKernel(
         int8_t region2X = param2.z;
         int8_t region2Y = param2.w;
 
-        FeatureResponseType featureResponse;
+        FeatureResponseType featureResponse1;
+        FeatureResponseType featureResponse2 = 0;
         switch (getType(currentNodeOffset, tree)) {
             case COLOR: {
                 ushort2 channels = getChannels(currentNodeOffset, tree);
-                featureResponse = calculateColorFeature(0,
+                featureResponse1 = calculateColorFeature(0,
                         imageWidth, imageHeight,
                         offset1X, offset1Y,
                         offset2X, offset2Y,
+                        region1X, region1Y,
+                        region2X, region2Y,
+                        channels.x, channels.y,
+                        x, y, depth);
+                featureResponse2 = calculateColorFeature(0,
+                        imageWidth, imageHeight,
+                        -offset1X, offset1Y,
+                        -offset2X, offset2Y,
                         region1X, region1Y,
                         region2X, region2Y,
                         channels.x, channels.y,
@@ -1286,7 +1306,7 @@ __global__ void classifyKernel(
                 break;
             case DEPTH:
             	assert(false);
-                featureResponse = calculateDepthFeature(0,
+                featureResponse1 = calculateDepthFeature(0,
                         imageWidth, imageHeight,
                         offset1X, offset1Y,
                         offset2X, offset2Y,
@@ -1298,7 +1318,12 @@ __global__ void classifyKernel(
 
         float threshold = getThreshold(currentNodeOffset, tree);
         assert(!isnan(threshold));
-        int value = static_cast<int>(!(featureResponse <= threshold));
+
+        //TODO:do this only for the color type feature not the depth too, also should be changed in aggregatehistogram
+        int tempValue = static_cast<int>(!(featureResponse1 <= threshold)) + static_cast<int>(!(featureResponse2 <= threshold));
+        int value = ((tempValue <= 1) ? 0 : 1);
+
+      //  int value = static_cast<int>(!(featureResponse <= threshold));
 
         currentNodeOffset += leftNodeOffset + value;
     }
@@ -1438,7 +1463,8 @@ void classifyImage(int treeCacheSize, cuv::ndarray<float, cuv::dev_memory_space>
 }
 
 __global__ void featureResponseKernel(
-        FeatureResponseType* featureResponses,
+        FeatureResponseType* featureResponses1,
+        FeatureResponseType* featureResponses2,
         const int8_t* types,
         const int16_t imageWidth, const int16_t imageHeight,
         const int8_t* offsets1X, const int8_t* offsets1Y,
@@ -1470,11 +1496,12 @@ __global__ void featureResponseKernel(
 
     int imageNr = imageNumbers[sample];
 
-    FeatureResponseType featureResponse;
+    FeatureResponseType featureResponse1;
+    FeatureResponseType featureResponse2 = 0;
 
     switch (type) {
         case COLOR:
-            featureResponse = calculateColorFeature(imageNr,
+          featureResponse1 = calculateColorFeature(imageNr,
                     imageWidth, imageHeight,
                     offset1X, offset1Y,
                     offset2X, offset2Y,
@@ -1482,9 +1509,17 @@ __global__ void featureResponseKernel(
                     region2X, region2Y,
                     channels1[feature], channels2[feature],
                     samplesX[sample], samplesY[sample], depths[sample]);
+            featureResponse2 = calculateColorFeature(imageNr,
+                     imageWidth, imageHeight,
+                     -offset1X, offset1Y,
+                     -offset2X, offset2Y,
+                     region1X, region1Y,
+                     region2X, region2Y,
+                     channels1[feature], channels2[feature],
+                     samplesX[sample], samplesY[sample], depths[sample]);
             break;
         case DEPTH:
-            featureResponse = calculateDepthFeature(imageNr,
+            featureResponse1 = calculateDepthFeature(imageNr,
                     imageWidth, imageHeight,
                     offset1X, offset1Y,
                     offset2X, offset2Y,
@@ -1497,7 +1532,8 @@ __global__ void featureResponseKernel(
             break;
     }
 
-    featureResponses[featureResponseOffset(sample, feature, numSamples, numFeatures)] = featureResponse;
+    featureResponses1[featureResponseOffset(sample, feature, numSamples, numFeatures)] = featureResponse1;
+    featureResponses2[featureResponseOffset(sample, feature, numSamples, numFeatures)] = featureResponse2;
 }
 
 // http://stackoverflow.com/questions/600293/how-to-check-if-a-number-is-a-power-of-2
@@ -1557,7 +1593,8 @@ __global__ void scoreKernel(const WeightType* counters,
 }
 
 __global__ void aggregateHistogramsKernel(
-        const FeatureResponseType* featureResponses,
+        const FeatureResponseType* featureResponses1,
+        const FeatureResponseType* featureResponses2,
         WeightType* counters,
         const float* thresholds,
         const uint8_t* sampleLabel,
@@ -1594,12 +1631,16 @@ __global__ void aggregateHistogramsKernel(
     unsigned int labelFlags = 0;
 
     // iterate over all samples and increment the according counter in shared memory
-    const FeatureResponseType* resultPtr = featureResponses
+    const FeatureResponseType* resultPtr1 = featureResponses1
+            + featureResponseOffset(threadIdx.x, feature, numSamples, numFeatures);
+    const FeatureResponseType* resultPtr2 = featureResponses2
             + featureResponseOffset(threadIdx.x, feature, numSamples, numFeatures);
     for (unsigned int sample = threadIdx.x; sample < numSamples; sample += blockDim.x) {
 
-        FeatureResponseType featureResponse = *resultPtr;
-        resultPtr += blockDim.x; // need to change if featureResponseOffset calculation changes
+        FeatureResponseType featureResponse1 = *resultPtr1;
+        resultPtr1 += blockDim.x; // need to change if featureResponseOffset calculation changes
+        FeatureResponseType featureResponse2 = *resultPtr2;
+        resultPtr2 += blockDim.x; // need to change if featureResponseOffset calculation changes
 
         uint8_t label = sampleLabel[sample];
         assert(label < numLabels);
@@ -1607,7 +1648,8 @@ __global__ void aggregateHistogramsKernel(
         assert(label < 32);
         labelFlags |= 1 << label;
 
-        int value = static_cast<int>(!(featureResponse <= threshold));
+        int tempValue = static_cast<int>(!(featureResponse1 <= threshold)) + static_cast<int>(!(featureResponse2 <= threshold));
+        int value = ((tempValue <= 1) ? 0 : 1);
         assert(value == 0 || value == 1);
         assert(counterShared[(2 * label) * blockDim.x + 2 * threadIdx.x + value] < COUNTER_MAX);
         counterShared[(2 * label) * blockDim.x + 2 * threadIdx.x + value]++;
@@ -1940,8 +1982,11 @@ cuv::ndarray<WeightType, cuv::dev_memory_space> ImageFeatureEvaluation::calculat
             static_cast<size_t>(counters.size() * sizeof(WeightType)), streams[0]));
 
     assert(numFeatures == configuration.getFeatureCount());
-    cuv::ndarray<FeatureResponseType, cuv::dev_memory_space> featureResponsesDevice(numFeatures,
+
+    cuv::ndarray<FeatureResponseType, cuv::dev_memory_space> featureResponsesDevice1(numFeatures,
             configuration.getMaxSamplesPerBatch(), featureResponsesAllocator);
+    cuv::ndarray<FeatureResponseType, cuv::dev_memory_space> featureResponsesDevice2(numFeatures,
+            configuration.getMaxSamplesPerBatch(), featureResponses2Allocator);
 
     if (featureResponsesHost) {
         size_t totalSamples = 0;
@@ -1963,7 +2008,8 @@ cuv::ndarray<WeightType, cuv::dev_memory_space> ImageFeatureEvaluation::calculat
 
             Samples<cuv::dev_memory_space> sampleData = copySamplesToDevice(currentBatch, streams[0]);
 
-            featureResponsesDevice.resize(numFeatures, batchSize);
+            featureResponsesDevice1.resize(numFeatures, batchSize);
+            featureResponsesDevice2.resize(numFeatures, batchSize);
 
             unsigned int featuresPerBlock = std::min(numFeatures, 32u);
             unsigned int samplesPerBlock = std::min(batchSize, 4u);
@@ -1984,7 +2030,8 @@ cuv::ndarray<WeightType, cuv::dev_memory_space> ImageFeatureEvaluation::calculat
                 cudaSafeCall(cudaFuncSetCacheConfig(featureResponseKernel, cudaFuncCachePreferL1));
                 utils::Profile profile("calculate feature responses");
                 featureResponseKernel<<<blockSize, threads, 0, streams[0]>>>(
-                        featureResponsesDevice.ptr(),
+                        featureResponsesDevice1.ptr(),
+                        featureResponsesDevice2.ptr(),
                         featuresAndThresholds.types().ptr(),
                         imageWidth, imageHeight,
                         featuresAndThresholds.offset1X().ptr(), featuresAndThresholds.offset1Y().ptr(),
@@ -2003,10 +2050,11 @@ cuv::ndarray<WeightType, cuv::dev_memory_space> ImageFeatureEvaluation::calculat
 
             cudaSafeCall(cudaStreamSynchronize(streams[0]));
 
+            //please note that featureResponsesDevice2 was not added
             if (featureResponsesHost) {
                 // append feature responses on device to the feature responses for our caller
                 (*featureResponsesHost)[cuv::indices[cuv::index_range()][cuv::index_range(samplesProcessed,
-                        samplesProcessed + batchSize)]] = featureResponsesDevice;
+                        samplesProcessed + batchSize)]] = featureResponsesDevice1;
             }
 
             node.addTimerValue("featureResponse", featureResponseTimer);
@@ -2029,12 +2077,14 @@ cuv::ndarray<WeightType, cuv::dev_memory_space> ImageFeatureEvaluation::calculat
                 dim3 threads(threadsPerBlock);
 
                 utils::Profile profile((boost::format("aggregate histograms (%d samples)") % batchSize).str());
-                unsigned int sharedMemory = sizeof(unsigned short) * 2 * numLabels * threadsPerBlock;
+                unsigned int sharedMemory = sizeof(unsigned short) * 2 * numLabels * threadsPerBlock * 2;
 
-                cudaSafeCall(cudaFuncSetCacheConfig(aggregateHistogramsKernel, cudaFuncCachePreferShared));
+               // cudaSafeCall(cudaFuncSetCacheConfig(aggregateHistogramsKernel, cudaFuncCachePreferShared));
+                cudaSafeCall(cudaFuncSetCacheConfig(aggregateHistogramsKernel, cudaFuncCachePreferL1));
 
                 aggregateHistogramsKernel<<<blockSize, threads, sharedMemory, streams[1]>>>(
-                        featureResponsesDevice.ptr(),
+                        featureResponsesDevice1.ptr(),
+                        featureResponsesDevice2.ptr(),
                         counters.ptr(),
                         featuresAndThresholds.thresholds().ptr(),
                         sampleData.labels,

@@ -412,13 +412,13 @@ public:
     /**
      * @return the feature response as documented on https://github.com/deeplearningais/curfil/wiki/Visual-Features.
      */
-    FeatureResponseType calculateFeatureResponse(const PixelInstance& instance) const {
+    FeatureResponseType calculateFeatureResponse(const PixelInstance& instance, bool flipRegion = false) const {
         assert(isValid());
         switch (featureType) {
             case DEPTH:
                 return calculateDepthFeature(instance);
             case COLOR:
-                return calculateColorFeature(instance);
+                return calculateColorFeature(instance, flipRegion);
             default:
                 assert(false);
                 break;
@@ -485,24 +485,34 @@ private:
     Region region2;
     uint8_t channel2;
 
-    FeatureResponseType calculateColorFeature(const PixelInstance& instance) const {
+    FeatureResponseType calculateColorFeature(const PixelInstance& instance, bool flipRegion) const {
 
         const Depth depth = instance.getDepth();
         if (!depth.isValid()) {
             return std::numeric_limits<double>::quiet_NaN();
         }
 
-        FeatureResponseType a = instance.averageRegionColor(offset1.normalize(depth), region1.normalize(depth),
+        FeatureResponseType a;
+        if (flipRegion)
+        	a = instance.averageRegionColor(Offset(-offset1.getX(),offset1.getY()).normalize(depth), region1.normalize(depth),
+                    channel1);
+        else
+        	a = instance.averageRegionColor(offset1.normalize(depth), region1.normalize(depth),
                 channel1);
         if (isnan(a))
             return a;
 
-        FeatureResponseType b = instance.averageRegionColor(offset2.normalize(depth), region2.normalize(depth),
+        FeatureResponseType b;
+        if (flipRegion)
+        	b = instance.averageRegionColor(Offset(-offset2.getX(),offset2.getY()).normalize(depth), region2.normalize(depth),
+                    channel2);
+        else
+        	b = instance.averageRegionColor(offset2.normalize(depth), region2.normalize(depth),
                 channel2);
         if (isnan(b))
             return b;
 
-        FeatureResponseType c = instance.averageRegionColor(Offset(-offset1.getX(),offset1.getY()).normalize(depth), region1.normalize(depth),
+      /*  FeatureResponseType c = instance.averageRegionColor(Offset(-offset1.getX(),offset1.getY()).normalize(depth), region1.normalize(depth),
                 channel1);
         if (isnan(c))
             return c;
@@ -512,7 +522,9 @@ private:
         if (isnan(d))
             return d;
 
-        return (a - b) + (c - d);
+        return (a - b) + (d - c);*/
+
+        return (a - b);
     }
 
     FeatureResponseType calculateDepthFeature(const PixelInstance& instance) const {
@@ -798,7 +810,8 @@ public:
                     keysIndicesAllocator(boost::make_shared<cuv::pooled_cuda_allocator>("keysIndices")),
                     scoresAllocator(boost::make_shared<cuv::pooled_cuda_allocator>("scores")),
                     countersAllocator(boost::make_shared<cuv::pooled_cuda_allocator>("counters")),
-                    featureResponsesAllocator(boost::make_shared<cuv::pooled_cuda_allocator>("featureResponses")) {
+                    featureResponsesAllocator(boost::make_shared<cuv::pooled_cuda_allocator>("featureResponses")),
+                    featureResponses2Allocator(boost::make_shared<cuv::pooled_cuda_allocator>("featureResponses2")){
         assert(configuration.getBoxRadius() > 0);
         assert(configuration.getRegionSize() > 0);
 
@@ -866,6 +879,7 @@ private:
     boost::shared_ptr<cuv::allocator> scoresAllocator;
     boost::shared_ptr<cuv::allocator> countersAllocator;
     boost::shared_ptr<cuv::allocator> featureResponsesAllocator;
+    boost::shared_ptr<cuv::allocator> featureResponses2Allocator;
 };
 
 /**

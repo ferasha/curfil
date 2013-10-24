@@ -76,7 +76,8 @@ public:
             const unsigned int labelOffset = label * labelStride;
 
             for (size_t featureNr = 0; featureNr < numFeatures; ++featureNr) {
-                double value = featureFunctions[featureNr].calculateFeatureResponse(*sample);
+                double value1 = featureFunctions[featureNr].calculateFeatureResponse(*sample, false);
+                double value2 = featureFunctions[featureNr].calculateFeatureResponse(*sample, true);
                 const std::vector<float>& thresholdsPerFeature = thresholds[featureNr];
 
                 const unsigned int featureOffset = labelOffset + featureNr * featureStride;
@@ -87,8 +88,9 @@ public:
 
                     // avoid the if () else () branch here by casting the compare into 0 or 1
                     // important: (!(x<=y)) is not the same as (x>y) because of NaNs!
-                    int offset = static_cast<int>(!(value <= threshold));
-                    assert(offset == ((value <= threshold) ? 0 : 1));
+                    int offset = static_cast<int>(!(value1 <= threshold)) + static_cast<int>(!(value2 <= threshold));
+                   // assert(offset == ((value <= threshold) ? 0 : 1));
+                    assert(offset ? 0 : 1);
 
                     // offset stride must be 1
                     assert(perClassHistogram.stride(3) == 1);
