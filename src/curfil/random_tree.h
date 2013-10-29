@@ -84,7 +84,6 @@ public:
 			return (((!(value1 <= getThreshold()) + !(value2 <= getThreshold())) <= 1) ? LEFT : RIGHT);
 		} else
 			return (!(value1 <= getThreshold()) ? LEFT : RIGHT);
-		// return (feature.calculateFeatureResponse(instance,flipRegion) <= getThreshold() ? LEFT : RIGHT);
 	}
 
     // Return the underlying feature used

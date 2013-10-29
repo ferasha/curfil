@@ -512,18 +512,6 @@ private:
         if (isnan(b))
             return b;
 
-      /*  FeatureResponseType c = instance.averageRegionColor(Offset(-offset1.getX(),offset1.getY()).normalize(depth), region1.normalize(depth),
-                channel1);
-        if (isnan(c))
-            return c;
-
-        FeatureResponseType d = instance.averageRegionColor(Offset(-offset2.getX(),offset2.getY()).normalize(depth), region2.normalize(depth),
-                channel2);
-        if (isnan(d))
-            return d;
-
-        return (a - b) + (d - c);*/
-
         return (a - b);
     }
 
@@ -810,8 +798,7 @@ public:
                     keysIndicesAllocator(boost::make_shared<cuv::pooled_cuda_allocator>("keysIndices")),
                     scoresAllocator(boost::make_shared<cuv::pooled_cuda_allocator>("scores")),
                     countersAllocator(boost::make_shared<cuv::pooled_cuda_allocator>("counters")),
-                    featureResponsesAllocator(boost::make_shared<cuv::pooled_cuda_allocator>("featureResponses")),
-                    featureResponses2Allocator(boost::make_shared<cuv::pooled_cuda_allocator>("featureResponses2")){
+                    featureResponsesAllocator(boost::make_shared<cuv::pooled_cuda_allocator>("featureResponses")) {
         assert(configuration.getBoxRadius() > 0);
         assert(configuration.getRegionSize() > 0);
 
@@ -879,7 +866,6 @@ private:
     boost::shared_ptr<cuv::allocator> scoresAllocator;
     boost::shared_ptr<cuv::allocator> countersAllocator;
     boost::shared_ptr<cuv::allocator> featureResponsesAllocator;
-    boost::shared_ptr<cuv::allocator> featureResponses2Allocator;
 };
 
 /**

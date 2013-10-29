@@ -181,21 +181,7 @@ FeatureResponseType calculateColorFeature(int imageNr,
 
     if (isnan(b))
         return b;
-    /*
-    //to simulate flipping the images horizontally
-    FeatureResponseType c = averageRegionColor(imageNr, imageWidth, imageHeight, channel1, depth, sampleX, sampleY,
-            -offset1X, offset1Y, region1X, region1Y);
 
-    if (isnan(c))
-        return c;
-
-    FeatureResponseType d = averageRegionColor(imageNr, imageWidth, imageHeight, channel2, depth, sampleX, sampleY,
-            -offset2X, offset2Y, region2X, region2Y);
-
-    if (isnan(d))
-        return d;
-
-    return (a - b) + (d - c);*/
     return (a - b);
 }
 
@@ -1977,7 +1963,7 @@ cuv::ndarray<WeightType, cuv::dev_memory_space> ImageFeatureEvaluation::calculat
     cuv::ndarray<FeatureResponseType, cuv::dev_memory_space> featureResponsesDevice1(numFeatures,
             configuration.getMaxSamplesPerBatch(), featureResponsesAllocator);
     cuv::ndarray<FeatureResponseType, cuv::dev_memory_space> featureResponsesDevice2(numFeatures,
-            configuration.getMaxSamplesPerBatch(), featureResponses2Allocator);
+            configuration.getMaxSamplesPerBatch(), featureResponsesAllocator);
 
     if (featureResponsesHost) {
         size_t totalSamples = 0;
@@ -2070,8 +2056,7 @@ cuv::ndarray<WeightType, cuv::dev_memory_space> ImageFeatureEvaluation::calculat
                 utils::Profile profile((boost::format("aggregate histograms (%d samples)") % batchSize).str());
                 unsigned int sharedMemory = sizeof(unsigned short) * 2 * numLabels * threadsPerBlock * 2;
 
-               // cudaSafeCall(cudaFuncSetCacheConfig(aggregateHistogramsKernel, cudaFuncCachePreferShared));
-                cudaSafeCall(cudaFuncSetCacheConfig(aggregateHistogramsKernel, cudaFuncCachePreferL1));
+                cudaSafeCall(cudaFuncSetCacheConfig(aggregateHistogramsKernel, cudaFuncCachePreferShared));
 
                 aggregateHistogramsKernel<<<blockSize, threads, sharedMemory, streams[1]>>>(
                         featureResponsesDevice1.ptr(),

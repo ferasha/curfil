@@ -96,7 +96,6 @@ public:
 						offset = ((value1 <= threshold) ? 0 : 1);
 					}
 
-                   // assert(offset == ((value <= threshold) ? 0 : 1));
                     assert(offset ? 0 : 1);
 
                     // offset stride must be 1
