@@ -2054,7 +2054,7 @@ cuv::ndarray<WeightType, cuv::dev_memory_space> ImageFeatureEvaluation::calculat
                 dim3 threads(threadsPerBlock);
 
                 utils::Profile profile((boost::format("aggregate histograms (%d samples)") % batchSize).str());
-                unsigned int sharedMemory = sizeof(unsigned short) * 2 * numLabels * threadsPerBlock * 2;
+                unsigned int sharedMemory = sizeof(unsigned short) * 2 * numLabels * threadsPerBlock;
 
                 cudaSafeCall(cudaFuncSetCacheConfig(aggregateHistogramsKernel, cudaFuncCachePreferShared));
 
