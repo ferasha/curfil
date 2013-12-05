@@ -56,6 +56,8 @@ public:
         const ScoreType leftProb = totalLeft / total;
         const ScoreType rightProb = totalRight / total;
 
+        W testsumallclasses = 0;
+
 #ifndef NDEBUG
         W totalLeftTest = 0;
         W totalRightTest = 0;
@@ -68,6 +70,8 @@ public:
             const W& leftValue = leftClasses[offset];
             const W& rightValue = rightClasses[offset];
 
+            testsumallclasses+=allClasses[label];
+
 #ifndef NDEBUG
             assert(leftValue <= allClasses[label]);
             assert(rightValue <= allClasses[label]);
@@ -77,7 +81,7 @@ public:
             totalRightTest += rightValue;
 #endif
 
-            const ScoreType classProb = allClasses[label] / total;
+           const ScoreType classProb = allClasses[label] / total;
             assertProbability(classProb);
 
             if (leftValue > 0) {
@@ -92,6 +96,8 @@ public:
                 score += classProbRight * log2(classProbRight / (rightProb * classProb));
             }
         }
+
+        assert((testsumallclasses)==total);
 
         assert(totalLeftTest == totalLeft);
         assert(totalRightTest == totalRight);
@@ -123,7 +129,6 @@ protected:
         for (size_t label = 0; label < numLabels; label++) {
             const W& value = allClasses[label];
             assert(value <= total);
-
             if (value > 0) {
                 H_c += entropy(value);
             }

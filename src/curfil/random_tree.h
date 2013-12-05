@@ -75,10 +75,25 @@ public:
         return (*this);
     }
 
-    // Return left or right branch for a given instance and feature function.
-    SplitBranch split(const Instance& instance) const {
-        return (feature.calculateFeatureResponse(instance) <= getThreshold() ? LEFT : RIGHT);
-    }
+	// Return left or right branch for a given instance and feature function.
+	SplitBranch split(const Instance& instance, bool& newFlipping) const {
+		double value1, value2;
+		value1 = feature.calculateFeatureResponse(instance);
+
+		newFlipping = instance.getFlipping();
+		if (newFlipping) {
+			if (feature.getTypeString() == "color") {
+				value2 = feature.calculateFeatureResponse(instance, true);
+			} else
+				return (!(value1 <= getThreshold()) ? LEFT : RIGHT);
+
+			bool temp = !(value1 <= getThreshold());
+
+			if (!(value2 <= getThreshold()) != temp)
+				newFlipping = false;
+		}
+		return (!(value1 <= getThreshold()) ? LEFT : RIGHT);
+	}
 
     // Return the underlying feature used
     const FeatureFunction& getFeature() const {
@@ -334,6 +349,9 @@ public:
 
         for (size_t i = 0; i < samples.size(); i++) {
             histogram[samples[i]->getLabel()] += samples[i]->getWeight();
+            if (samples[i]->getFlipping() == true)
+            	histogram[samples[i]->getLabel()] += samples[i]->getWeight();
+            //TODO: should this be changed?
             trainSamples.push_back(*samples[i]);
         }
     }
@@ -635,7 +653,8 @@ private:
         assert(left.get());
         assert(right.get());
 
-        if (split.split(instance) == LEFT) {
+        bool newFlipping;
+        if (split.split(instance, newFlipping) == LEFT) {
             return left->traverseToLeaf(instance);
         } else {
             return right->traverseToLeaf(instance);
@@ -815,7 +834,7 @@ private:
             o << "histogram left:  " << leftNode->getHistogram() << std::endl;
             o << "histogram right: " << rightNode->getHistogram() << std::endl;
             throw std::runtime_error(o.str());
-        }
+       }
     }
 
 public:
@@ -859,13 +878,35 @@ public:
             std::vector<const Instance*> samplesLeft;
             std::vector<const Instance*> samplesRight;
 
+            std::vector<Instance> samplesBeforeChangeLeft;
+            std::vector<Instance> samplesBeforeChangeRight;
+
+            std::vector<const Instance*> samplesPtrBeforeChangeLeft;
+            std::vector<const Instance*> samplesPtrBeforeChangeRight;
+
             for (size_t sample = 0; sample < samples.size(); sample++) {
                 assert(samples[sample] != NULL);
-                if (bestSplit.split(*samples[sample]) == LEFT) {
-                    samplesLeft.push_back(samples[sample]);
+                bool newFlipping;
+                SplitBranch splitResult = bestSplit.split(*samples[sample], newFlipping);
+            	Instance sampleBeforeChange = *(samples[sample]);
+            	Instance* ptr = const_cast<Instance *>(samples[sample]);
+            	ptr->setFlipping(newFlipping);
+
+                if (splitResult == LEFT) {
+                	samplesBeforeChangeLeft.push_back(sampleBeforeChange);
+                	samplesLeft.push_back(ptr);
                 } else {
-                    samplesRight.push_back(samples[sample]);
+                	samplesBeforeChangeRight.push_back(sampleBeforeChange);
+                	samplesRight.push_back(ptr);
                 }
+            }
+
+            for (size_t i = 0; i < samplesBeforeChangeLeft.size(); i++) {
+            	samplesPtrBeforeChangeLeft.push_back(&samplesBeforeChangeLeft[i]);
+            }
+
+            for (size_t i = 0; i < samplesBeforeChangeRight.size(); i++) {
+            	samplesPtrBeforeChangeRight.push_back(&samplesBeforeChangeRight[i]);
             }
 
             assert(samplesLeft.size() + samplesRight.size() == samples.size());
@@ -877,8 +918,15 @@ public:
                     RandomTree<Instance, FeatureFunction> >(++idNode, currentNode->getLevel() + 1, samplesRight,
                     numClasses, currentNode);
 
+            boost::shared_ptr<RandomTree<Instance, FeatureFunction> > leftNodeHistogram = boost::make_shared<RandomTree<Instance,
+                    FeatureFunction> >(++idNode, currentNode->getLevel() + 1, samplesPtrBeforeChangeLeft, numClasses, currentNode);
+
+            boost::shared_ptr<RandomTree<Instance, FeatureFunction> > rightNodeHistogram = boost::make_shared<
+                    RandomTree<Instance, FeatureFunction> >(++idNode, currentNode->getLevel() + 1, samplesPtrBeforeChangeRight,
+                    numClasses, currentNode);
+
 #ifndef NDEBUG
-            compareHistograms(currentNode, leftNode, rightNode, bestSplit);
+            compareHistograms(currentNode, leftNodeHistogram, rightNodeHistogram, bestSplit);
 #endif
 
             if (samplesLeft.empty() || samplesRight.empty()) {
@@ -890,7 +938,7 @@ public:
                 CURFIL_ERROR("samplesLeft: " << samplesLeft.size());
                 CURFIL_ERROR("samplesRight: " << samplesRight.size());
 
-                compareHistograms(currentNode, leftNode, rightNode, bestSplit);
+                compareHistograms(currentNode, leftNodeHistogram, rightNodeHistogram, bestSplit);
 
                 if (samplesLeft.empty()) {
                     throw std::runtime_error("no samples in left node");
