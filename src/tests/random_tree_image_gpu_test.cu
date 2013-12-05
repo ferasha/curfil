@@ -1109,12 +1109,15 @@ BOOST_AUTO_TEST_CASE(testRecallOnGPU) {
         image.calculateIntegral();
 
         {
+        	cuv::ndarray<size_t, cuv::dev_memory_space> nodeOffsets(
+        	    	    	                cuv::extents[image.getHeight()][image.getWidth()]);
+
             utils::Profile classifyImageTimer("classifyImage");
             cuv::ndarray<float, cuv::dev_memory_space> output(
                     cuv::extents[NUM_LABELS][image.getHeight()][image.getWidth()]);
             cudaSafeCall(cudaMemset(output.ptr(), 0, static_cast<size_t>(output.size() * sizeof(float))));
 
-            classifyImage(treeCacheSize, output, image, NUM_LABELS, treeData);
+            classifyImage(treeCacheSize, output, image, NUM_LABELS, treeData,true,nodeOffsets);
         }
     }
 

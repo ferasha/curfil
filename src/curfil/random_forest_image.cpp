@@ -154,7 +154,7 @@ void RandomForestImage::train(const std::vector<LabeledRGBDImage>& trainLabelIma
 }
 
 LabelImage RandomForestImage::predict(const RGBDImage& image,
-         cuv::ndarray<float, cuv::host_memory_space>* probabilities, const bool onGPU, bool useDepthImages) const {
+         cuv::ndarray<float, cuv::host_memory_space>* probabilities, const bool onGPU, bool useDepthImages,cuv::ndarray<size_t, cuv::host_memory_space>* outputNodeOffsets) const {
 
     LabelImage prediction(image.getWidth(), image.getHeight());
 
@@ -169,18 +169,66 @@ LabelImage RandomForestImage::predict(const RGBDImage& image,
             cuv::extents[numClasses][image.getHeight()][image.getWidth()],
             m_predictionAllocator);
 
+   /* cuv::ndarray<size_t, cuv::host_memory_space> hostNodeOffsets(
+              cuv::extents[image.getHeight()][image.getWidth()],m_predictionAllocator);*/
+
     if (onGPU) {
+
+    	/*cuv::ndarray<size_t, cuv::dev_memory_space> nodeOffsets(
+    	                cuv::extents[image.getHeight()][image.getWidth()],m_predictionAllocator);*/
+    	cuv::ndarray<size_t, cuv::dev_memory_space> nodeOffsets(
+    	    	                cuv::extents[image.getHeight()][image.getWidth()]);
+
         cuv::ndarray<float, cuv::dev_memory_space> deviceProbabilities(
                 cuv::extents[numClasses][image.getHeight()][image.getWidth()],
                 m_predictionAllocator);
         cudaSafeCall(cudaMemset(deviceProbabilities.ptr(), 0, static_cast<size_t>(deviceProbabilities.size() * sizeof(float))));
 
         {
-            utils::Profile profile("classifyImagesGPU");
-            for (const boost::shared_ptr<const TreeNodes>& data : treeData) {
-                classifyImage(treeData.size(), deviceProbabilities, image, numClasses, data, useDepthImages);
-            }
-        }
+			utils::Profile profile("classifyImagesGPU");
+			for (const boost::shared_ptr<const TreeNodes>& data : treeData) {
+				classifyImage(treeData.size(), deviceProbabilities, image, numClasses, data, useDepthImages, nodeOffsets);
+				*outputNodeOffsets = nodeOffsets;
+				//hostNodeOffsets = nodeOffsets;
+				//*outputNodeOffsets = hostNodeOffsets;
+
+				//TODO should be change to parallel for and add lock
+				for (size_t treeNr = 0; treeNr < ensemble.size(); treeNr++) {
+					if (data->getTreeId() == ensemble[treeNr]->getId()) {
+						const boost::shared_ptr<RandomTree<PixelInstance, ImageFeatureFunction> >& tree = ensemble[treeNr]->getTree();
+
+
+					//	std::vector<RandomTree<PixelInstance, ImageFeatureFunction> > leafSet;
+
+					//	std::vector<boost::shared_ptr<RandomTree<PixelInstance, ImageFeatureFunction> > >leafSet;
+						std::vector<RandomTree<PixelInstance, ImageFeatureFunction> > leafSet;
+
+						tree->collectLeafNodes(leafSet);
+
+						CURFIL_INFO("tree id: "<<tree->getTreeId());
+						for (int y = 0; y < image.getHeight(); y++)
+							for(int x=0; x < image.getWidth(); x++){
+
+							    PixelInstance pixel(&image, 0, x, y);
+							    size_t offset_CPU = tree->traverseToLeaf(pixel)->getNodeId();
+
+								size_t offset = nodeOffsets[image.getWidth() * image.getHeight() + y * image.getWidth() + x];
+								CURFIL_INFO("calculated offset: "<<offset<<", CPU offset: "<<offset_CPU);
+								for (unsigned int i =0; i<leafSet.size();i++)
+								{
+									if (leafSet[i].getNodeId() == offset)
+										//TODO should add sample weight instead of 1
+										//TODO should get the right label!
+									{tree->setAllPixelsHistogram(2,1);}
+								}
+
+						}
+					}
+
+				}
+
+			}
+		}
 
         normalizeProbabilities(deviceProbabilities);
 

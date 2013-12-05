@@ -330,12 +330,16 @@ public:
             const boost::shared_ptr<RandomTree<Instance, FeatureFunction> >& parent = boost::shared_ptr<
                     RandomTree<Instance, FeatureFunction> >()) :
             nodeId(nodeId), level(level), parent(parent), leaf(true), trainSamples(),
-                    numClasses(numClasses), histogram(numClasses), timers(),
+                    numClasses(numClasses), histogram(numClasses), allPixelsHistogram(numClasses), timers(),
                     split(), left(), right() {
 
         assert(histogram.ndim() == 1);
         for (size_t label = 0; label < numClasses; label++) {
             histogram[label] = 0;
+        }
+
+        for (size_t label = 0; label < numClasses; label++) {
+            allPixelsHistogram[label] = 0;
         }
 
         for (size_t i = 0; i < samples.size(); i++) {
@@ -400,6 +404,45 @@ public:
         }
         assert(node != NULL);
         node->collectNodeIndices(instance, nodeSet, includeRoot);
+    }
+
+  /*  void collectLeafNodes(std::vector<boost::shared_ptr<RandomTree<Instance, FeatureFunction> > >leafSet) {
+
+      //  tbb::concurrent_vector<cuv::ndarray<WeightType, cuv::host_memory_space> >& perClassHistograms;
+     //   std::vector<std::pair<RandomTreePointer, Samples> > samplesPerNodeNextLevel;
+
+    //	std::vector<RandomTree<PixelInstance, ImageFeatureFunction> > leafSet;
+
+    //	boost::shared_ptr<RandomTree<Instance, FeatureFunction> > leftNode
+
+  //      boost::shared_ptr<RandomTree<Instance, FeatureFunction> > leftNode = boost::make_shared<RandomTree<Instance,
+//                FeatureFunction> >(++idNode, currentNode->getLevel() + 1, samplesLeft, numClasses, currentNode);
+
+    	//getType(this).
+
+    	if (isLeaf())
+    	{
+        	leafSet.push_back(boost::make_shared<this>);
+    	}
+        else
+        {
+        	left->collectLeafNodes(leafSet);
+        	right->collectLeafNodes(leafSet);
+        }
+    }*/
+
+  //  void collectLeafNodes(std::vector<const RandomTree<Instance, FeatureFunction>* >& leafSet) {
+    void collectLeafNodes(const std::vector<RandomTree<Instance, FeatureFunction> > &leafSet) {
+
+    	if (isLeaf())
+    	{
+       // 	leafSet.push_back(*this);
+    	}
+        else
+        {
+        	left->collectLeafNodes(leafSet);
+        	right->collectLeafNodes(leafSet);
+        }
     }
 
     // Classify an instance by traversing the tree and returning the tree leaf
@@ -586,6 +629,25 @@ public:
         return trainSamples;
     }
 
+    void setAllPixelsHistogram(size_t label, double value) {
+
+        allPixelsHistogram[label] += value;
+    }
+
+    const RandomTree<Instance, FeatureFunction>* traverseToLeaf(const Instance& instance) const {
+        if (isLeaf())
+            return this;
+
+        assert(left.get());
+        assert(right.get());
+
+        if (split.split(instance) == LEFT) {
+            return left->traverseToLeaf(instance);
+        } else {
+            return right->traverseToLeaf(instance);
+        }
+    }
+
 private:
     // A unique node identifier within this tree
     const size_t nodeId;
@@ -606,6 +668,7 @@ private:
     size_t numClasses;
 
     cuv::ndarray<WeightType, cuv::host_memory_space> histogram;
+    cuv::ndarray<WeightType, cuv::host_memory_space> allPixelsHistogram;
 
     cuv::ndarray<double, cuv::host_memory_space> normalizedHistogram;
 
@@ -632,20 +695,6 @@ private:
             }
         }
         return maxClass;
-    }
-
-    const RandomTree<Instance, FeatureFunction>* traverseToLeaf(const Instance& instance) const {
-        if (isLeaf())
-            return this;
-
-        assert(left.get());
-        assert(right.get());
-
-        if (split.split(instance) == LEFT) {
-            return left->traverseToLeaf(instance);
-        } else {
-            return right->traverseToLeaf(instance);
-        }
     }
 
 };

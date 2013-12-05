@@ -1209,7 +1209,7 @@ TreeNodeData getTreeNode(const int nodeNr, const boost::shared_ptr<const TreeNod
 __global__ void classifyKernel(
         float* output, int tree,
         const int16_t imageWidth, const int16_t imageHeight,
-        const LabelType numLabels, bool useDepthImages) {
+        const LabelType numLabels, bool useDepthImages, size_t* nodeOffsets ) {
 
     const unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
     if (x >= imageWidth) {
@@ -1240,6 +1240,7 @@ __global__ void classifyKernel(
                 assert(!isnan(v));
                 assert(v >= 0.0);
                 output[label * imageWidth * imageHeight + y * imageWidth + x] += v;
+                nodeOffsets[imageWidth * imageHeight + y * imageWidth + x] = currentNodeOffset;
             }
             // leaf node
             return;
@@ -1399,7 +1400,7 @@ void determineMaxProbabilities(const cuv::ndarray<float, cuv::dev_memory_space>&
 }
 
 void classifyImage(int treeCacheSize, cuv::ndarray<float, cuv::dev_memory_space>& output, const RGBDImage& image,
-        LabelType numLabels, const boost::shared_ptr<const TreeNodes>& treeData, bool useDepthImages) {
+        LabelType numLabels, const boost::shared_ptr<const TreeNodes>& treeData, bool useDepthImages,cuv::ndarray<size_t, cuv::dev_memory_space>& nodeOffsets) {
 
     std::set<const RGBDImage*> images;
     images.insert(&image);
@@ -1434,7 +1435,7 @@ void classifyImage(int treeCacheSize, cuv::ndarray<float, cuv::dev_memory_space>
 
     classifyKernel<<<blockSize, threads, 0, stream>>>(output.ptr(), tree,
             image.getWidth(), image.getHeight(),
-            numLabels, useDepthImages);
+            numLabels, useDepthImages, nodeOffsets.ptr());
 
     cudaSafeCall(cudaStreamSynchronize(stream));
 }

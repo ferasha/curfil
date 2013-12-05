@@ -63,7 +63,7 @@ public:
      */
     LabelImage predict(const RGBDImage& image,
             cuv::ndarray<float, cuv::host_memory_space>* prediction = 0,
-            const bool onGPU = true, bool useDepthImages = true) const;
+            const bool onGPU = true, bool useDepthImages = true,  cuv::ndarray<size_t, cuv::host_memory_space>* nodeOffsets = 0) const;
 
     /**
      * @return a recursive sum of per-feature type count

@@ -77,6 +77,51 @@ RandomForestImage train(std::vector<LabeledRGBDImage>& images, size_t trees,
     CURFIL_INFO("training took " << trainTimer.format(2) <<
             " (" << std::setprecision(3) << trainTimer.getSeconds() / 60.0 << " min)");
 
+
+
+
+
+
+
+    bool onGPU = randomForest.getConfiguration().getAccelerationMode() == GPU_ONLY;
+    bool useDepthImages = randomForest.getConfiguration().isUseDepthImages();
+
+    size_t grainSize = 1;
+    if (!onGPU) {
+        grainSize = images.size();
+    }
+
+    //TODO get the correct histogram bias
+    randomForest.normalizeHistograms(0.0);
+
+    tbb::parallel_for(tbb::blocked_range<size_t>(0, images.size(), grainSize),
+            [&](const tbb::blocked_range<size_t>& range) {
+                for(size_t imageNr = range.begin(); imageNr != range.end(); imageNr++) {
+                    cuv::ndarray<float, cuv::host_memory_space> probabilities;
+                    cuv::ndarray<size_t, cuv::host_memory_space> nodeOffsets;
+                    const LabeledRGBDImage imagePair = images[imageNr];
+                    const RGBDImage& testImage = imagePair.getRGBDImage();
+                    LabelImage prediction(testImage.getWidth(), testImage.getHeight());
+                    prediction = randomForest.predict(testImage, &probabilities, onGPU, useDepthImages, &nodeOffsets);
+
+                    //return an array where for each pixel position we know the node(id) it reached
+                	//access the random tree in the random forest and set the allpixelshistogram to the new acquired value
+                }
+    });
+    //loop over all the values of the leaf nodes in the random forest and set the histogram value to the allpixelshistogram value
+
+
+
+
+
+
+
+
+
+
+
+
+
     std::cout << randomForest;
     for (const auto& featureCount : randomForest.countFeatures()) {
         const std::string featureType = featureCount.first;

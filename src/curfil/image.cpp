@@ -881,7 +881,7 @@ std::vector<LabeledRGBDImage> loadImages(const std::string& folder, bool useCIEL
     std::vector<std::string> filenames = listImageFilenames(folder);
     CURFIL_INFO("going to load " << filenames.size() << " images from " << folder);
 
-	//filenames.erase(filenames.begin()+100, filenames.end());
+	//filenames.erase(filenames.begin()+15, filenames.end());
 
     size_t totalSizeInMemory = 0;
 	int maxWidth = 0;
