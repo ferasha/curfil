@@ -57,18 +57,26 @@ public:
         const ScoreType rightProb = totalRight / total;
 
         W testsumallclasses = 0;
-
-#ifndef NDEBUG
         W totalLeftTest = 0;
         W totalRightTest = 0;
+#ifndef NDEBUG
+
 #endif
 
         ScoreType score = 0;
+
+     /*   std::stringstream strLeft;
+        std::stringstream strRight;
+        std::stringstream strAll;*/
 
         for (size_t label = 0; label < numLabels; label++) {
             const size_t offset = label * leftRightStride;
             const W& leftValue = leftClasses[offset];
             const W& rightValue = rightClasses[offset];
+
+         /*   strLeft<<leftValue<<",";
+            strRight<<rightValue<<",";
+            strAll<<allClasses[label]<<",";*/
 
             testsumallclasses+=allClasses[label];
 
@@ -97,6 +105,18 @@ public:
             }
         }
 
+        /*  std::stringstream o;
+        if (testsumallclasses !=total || totalLeftTest != totalLeft || totalRightTest != totalRight)
+        {
+        	o.precision(10);
+        	o<<"strAll "<<strAll.str()<<std::endl;
+        	o<<"strLeft "<<strLeft.str()<<std::endl;
+        	o<<"strRight "<<strRight.str()<<std::endl;
+        	o<<"testsumallclasses "<<testsumallclasses<<" total "<<total<<std::endl;
+        	o<<"totalLeft "<<totalLeft<<" totalLeftTest "<<totalLeftTest<<std::endl;
+        	o<<"totalRight "<<totalRight<<" totalRightTest "<<totalRightTest<<std::endl;
+        	o<<"numlabels "<<numLabels<<std::endl;
+        }*/
         assert((testsumallclasses)==total);
 
         assert(totalLeftTest == totalLeft);
