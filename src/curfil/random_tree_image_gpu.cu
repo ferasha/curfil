@@ -1436,7 +1436,7 @@ __global__ void featureResponseKernel(
         const int8_t* regions2X, const int8_t* regions2Y,
         const int8_t* channels1, const int8_t* channels2,
         const int* samplesX, const int* samplesY, const float* depths,
-        const int* imageNumbers, unsigned int numFeatures, unsigned int numSamples) {
+        const int* imageNumbers,  const bool* sampleFlipping, unsigned int numFeatures, unsigned int numSamples) {
 
     unsigned int feature = blockIdx.x * blockDim.y + threadIdx.y;
     unsigned int sample = blockIdx.y * blockDim.x + threadIdx.x;
@@ -1462,9 +1462,11 @@ __global__ void featureResponseKernel(
     FeatureResponseType featureResponse1;
     FeatureResponseType featureResponse2 = 0;
 
+    bool useFlipping = sampleFlipping[sample];
+
     switch (type) {
         case COLOR:
-          featureResponse1 = calculateColorFeature(imageNr,
+        { featureResponse1 = calculateColorFeature(imageNr,
                     imageWidth, imageHeight,
                     offset1X, offset1Y,
                     offset2X, offset2Y,
@@ -1472,6 +1474,7 @@ __global__ void featureResponseKernel(
                     region2X, region2Y,
                     channels1[feature], channels2[feature],
                     samplesX[sample], samplesY[sample], depths[sample]);
+          if (useFlipping) {
             featureResponse2 = calculateColorFeature(imageNr,
                      imageWidth, imageHeight,
                      -offset1X, offset1Y,
@@ -1479,23 +1482,24 @@ __global__ void featureResponseKernel(
                      region1X, region1Y,
                      region2X, region2Y,
                      channels1[feature], channels2[feature],
-                     samplesX[sample], samplesY[sample], depths[sample]);
+                     samplesX[sample], samplesY[sample], depths[sample]);}}
             break;
         case DEPTH:
-            featureResponse1 = calculateDepthFeature(imageNr,
+        { featureResponse1 = calculateDepthFeature(imageNr,
                     imageWidth, imageHeight,
                     offset1X, offset1Y,
                     offset2X, offset2Y,
                     region1X, region1Y,
                     region2X, region2Y,
                     samplesX[sample], samplesY[sample], depths[sample]);
+            if (useFlipping) {
             featureResponse2 = calculateDepthFeature(imageNr,
                     imageWidth, imageHeight,
                     -offset1X, offset1Y,
                     -offset2X, offset2Y,
                     region1X, region1Y,
                     region2X, region2Y,
-                    samplesX[sample], samplesY[sample], depths[sample]);
+                    samplesX[sample], samplesY[sample], depths[sample]);}}
             break;
         default:
             assert(false);
@@ -1641,7 +1645,7 @@ __global__ void aggregateHistogramsKernel(
     for (uint8_t label = 0; label < numLabels; label++) {
 
         // skip labels without samples
-       /* if (__syncthreads_or(labelFlags & (1 << label)) == 0) {
+      /*  if (__syncthreads_or(labelFlags & (1 << label)) == 0) {
             if (threadIdx.x < 2) {
                 counterShared[2 * label + threadIdx.x] = 0;
             }
@@ -2016,7 +2020,7 @@ cuv::ndarray<WeightType, cuv::dev_memory_space> ImageFeatureEvaluation::calculat
                         featuresAndThresholds.region1X().ptr(), featuresAndThresholds.region1Y().ptr(),
                         featuresAndThresholds.region2X().ptr(), featuresAndThresholds.region2Y().ptr(),
                         featuresAndThresholds.channel1().ptr(), featuresAndThresholds.channel2().ptr(),
-                        sampleData.sampleX, sampleData.sampleY, sampleData.depths, sampleData.imageNumbers,
+                        sampleData.sampleX, sampleData.sampleY, sampleData.depths, sampleData.imageNumbers, sampleData.useFlipping,
                         numFeatures,
                         batchSize
                 );

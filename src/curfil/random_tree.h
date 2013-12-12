@@ -957,9 +957,9 @@ public:
                     RandomTree<Instance, FeatureFunction> >(++idNode, currentNode->getLevel() + 1, samplesRight,
                     numClasses, currentNode);
 
-//#ifndef NDEBUG
-          //  compareHistograms(allHistogram, leftHistogram, rightHistogram, bestSplit, numClasses);
-//#endif
+#ifndef NDEBUG
+            compareHistograms(allHistogram, leftHistogram, rightHistogram, bestSplit, numClasses);
+#endif
 
             bool errorEmptyChildren = false;
             if (samplesLeft.empty() && leftFlipped == 0)
@@ -990,38 +990,37 @@ public:
                 }
             }
 
-			//if (leftFlipped > 0 or rightFlipped > 0) {
+			if (totalFlipped > 0) {
 				currentNode->recomputeHistogramNoFlipping(samples);
-			//}
+			}
 
 			if (!samplesLeft.empty() && !samplesRight.empty()) {
 				currentNode->addChildren(bestSplit, leftNode, rightNode);
 
 				if (shouldContinueGrowing(leftNode)) {
 					samplesPerNodeNextLevel.push_back(std::make_pair(leftNode, samplesLeft));
-				//	if ((currentLevel + 1) == configuration.getMaxDepth() && leftFlipped > 0)
-					if ((currentLevel + 1) == configuration.getMaxDepth())
-						leftNode->recomputeHistogramNoFlipping(samplesLeft);
+					if ((currentLevel + 1) == configuration.getMaxDepth() && totalFlipped > 0)
+						{leftNode->recomputeHistogramNoFlipping(samplesLeft);}
 				}
-			//	else if (leftFlipped > 0) {
-				else
+				else if (totalFlipped > 0) {
 					leftNode->recomputeHistogramNoFlipping(samplesLeft);
-			//	}
+				}
 
 				if (shouldContinueGrowing(rightNode)) {
 					samplesPerNodeNextLevel.push_back(std::make_pair(rightNode, samplesRight));
-				//	if ((currentLevel + 1) == configuration.getMaxDepth() && rightFlipped > 0)
-					if ((currentLevel + 1) == configuration.getMaxDepth())
-						rightNode->recomputeHistogramNoFlipping(samplesRight);
+					if ((currentLevel + 1) == configuration.getMaxDepth() && totalFlipped > 0)
+						{rightNode->recomputeHistogramNoFlipping(samplesRight);}
 				}
-			//	else if (rightFlipped > 0) {
-				else
+				else if (totalFlipped > 0) {
 					rightNode->recomputeHistogramNoFlipping(samplesRight);
-			//	}
+				}
 			}
 			else
 				idNode = idNode - 2;
         }
+
+
+
 
         CURFIL_INFO("training level " << currentLevel << " took " << trainTimer.format(3));
         if (!samplesPerNodeNextLevel.empty()) {

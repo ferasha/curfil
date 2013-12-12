@@ -75,9 +75,13 @@ public:
 
             const unsigned int labelOffset = label * labelStride;
 
+            bool flipSetting = sample->getFlipping();
+
             for (size_t featureNr = 0; featureNr < numFeatures; ++featureNr) {
                 double value1 = featureFunctions[featureNr].calculateFeatureResponse(*sample, false);
-                double value2 = featureFunctions[featureNr].calculateFeatureResponse(*sample, true);
+                double value2 = 0;
+                if (flipSetting)
+                	{value2 = featureFunctions[featureNr].calculateFeatureResponse(*sample, true);}
 
                 const std::vector<float>& thresholdsPerFeature = thresholds[featureNr];
 
@@ -98,7 +102,6 @@ public:
                     perClassHistogram.ptr()[idx] += weight;
                     assert(perClassHistogram(label, featureNr, threshNr, offset) == perClassHistogram.ptr()[idx]);
 
-					bool flipSetting = sample->getFlipping();
 					if (flipSetting) {
 						offset = static_cast<int>(!(value2 <= threshold));
 						assert(offset == ((value2 <= threshold) ? 0 : 1));
