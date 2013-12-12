@@ -1004,6 +1004,7 @@ public:
 						leftNode->recomputeHistogramNoFlipping(samplesLeft);
 				}
 			//	else if (leftFlipped > 0) {
+				else
 					leftNode->recomputeHistogramNoFlipping(samplesLeft);
 			//	}
 
@@ -1014,6 +1015,7 @@ public:
 						rightNode->recomputeHistogramNoFlipping(samplesRight);
 				}
 			//	else if (rightFlipped > 0) {
+				else
 					rightNode->recomputeHistogramNoFlipping(samplesRight);
 			//	}
 			}
