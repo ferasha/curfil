@@ -427,7 +427,7 @@ public:
         assert(isValid());
         switch (featureType) {
             case DEPTH:
-                return calculateDepthFeature(instance);
+                return calculateDepthFeature(instance, flipRegion);
             case COLOR:
                 return calculateColorFeature(instance, flipRegion);
             default:
@@ -526,19 +526,27 @@ private:
         return (a - b);
     }
 
-    FeatureResponseType calculateDepthFeature(const PixelInstance& instance) const {
+    FeatureResponseType calculateDepthFeature(const PixelInstance& instance, bool flipRegion) const {
 
         const Depth depth = instance.getDepth();
         if (!depth.isValid()) {
             return std::numeric_limits<double>::quiet_NaN();
         }
 
-        FeatureResponseType a = instance.averageRegionDepth(offset1.normalize(depth), region1.normalize(depth));
+        FeatureResponseType a;
+        if (flipRegion)
+        	a = instance.averageRegionDepth(Offset(-offset1.getX(),offset1.getY()).normalize(depth), region1.normalize(depth));
+        else
+        	a = instance.averageRegionDepth(offset1.normalize(depth), region1.normalize(depth));
         if (isnan(a)) {
             return a;
         }
 
-        FeatureResponseType b = instance.averageRegionDepth(offset2.normalize(depth), region2.normalize(depth));
+        FeatureResponseType b;
+        if (flipRegion)
+        	b = instance.averageRegionDepth(Offset(-offset2.getX(),offset2.getY()).normalize(depth), region2.normalize(depth));
+        else
+        	b = instance.averageRegionDepth(offset2.normalize(depth), region2.normalize(depth));
         if (isnan(b)) {
             return b;
         }

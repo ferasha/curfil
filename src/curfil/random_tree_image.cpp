@@ -78,6 +78,7 @@ public:
             for (size_t featureNr = 0; featureNr < numFeatures; ++featureNr) {
                 double value1 = featureFunctions[featureNr].calculateFeatureResponse(*sample, false);
                 double value2 = featureFunctions[featureNr].calculateFeatureResponse(*sample, true);
+
                 const std::vector<float>& thresholdsPerFeature = thresholds[featureNr];
 
                 const unsigned int featureOffset = labelOffset + featureNr * featureStride;
@@ -97,11 +98,14 @@ public:
                     perClassHistogram.ptr()[idx] += weight;
                     assert(perClassHistogram(label, featureNr, threshNr, offset) == perClassHistogram.ptr()[idx]);
 
-                    offset = static_cast<int>(!(value2 <= threshold));
-                    assert(offset == ((value2 <= threshold) ? 0 : 1));
-                    idx = featureOffset + threshNr * thresholdsStride + offset;
-                    perClassHistogram.ptr()[idx] += weight;
-                    assert(perClassHistogram(label, featureNr, threshNr, offset) == perClassHistogram.ptr()[idx]);
+					bool flipSetting = sample->getFlipping();
+					if (flipSetting) {
+						offset = static_cast<int>(!(value2 <= threshold));
+						assert(offset == ((value2 <= threshold) ? 0 : 1));
+						idx = featureOffset + threshNr * thresholdsStride + offset;
+						perClassHistogram.ptr()[idx] += weight;
+						assert(perClassHistogram(label, featureNr, threshNr,offset)== perClassHistogram.ptr()[idx]);
+					}
                 }
             }
         }
@@ -428,8 +432,6 @@ std::vector<SplitFunction<PixelInstance, ImageFeatureFunction> > ImageFeatureEva
 
                    unsigned int index = bestFeat * configuration.getThresholds() * currentNode.getNumClasses() * 2;
                    index += bestThresh * currentNode.getNumClasses() * 2;
-                 //  index += label * 2;
-                 //   index += value;
 
                    std::stringstream strLeft;
                    std::stringstream strRight;
@@ -438,7 +440,7 @@ std::vector<SplitFunction<PixelInstance, ImageFeatureFunction> > ImageFeatureEva
                     	strRight<<counters2[index + label * 2 + 1]<<",";
                     }
                  //   CURFIL_INFO("org histogram"<<currentNode.getHistogram());
-                //    CURFIL_INFO("left split "<<strLeft.str());
+                 //   CURFIL_INFO("left split "<<strLeft.str());
                  //   CURFIL_INFO("right split"<<strRight.str());
                     bestSplits[nodeNr]= bestFeature;
                 }

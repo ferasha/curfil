@@ -1489,6 +1489,13 @@ __global__ void featureResponseKernel(
                     region1X, region1Y,
                     region2X, region2Y,
                     samplesX[sample], samplesY[sample], depths[sample]);
+            featureResponse2 = calculateDepthFeature(imageNr,
+                    imageWidth, imageHeight,
+                    -offset1X, offset1Y,
+                    -offset2X, offset2Y,
+                    region1X, region1Y,
+                    region2X, region2Y,
+                    samplesX[sample], samplesY[sample], depths[sample]);
             break;
         default:
             assert(false);
@@ -1618,8 +1625,6 @@ __global__ void aggregateHistogramsKernel(
         assert(counterShared[(2 * label) * blockDim.x + 2 * threadIdx.x + value] < COUNTER_MAX);
         counterShared[(2 * label) * blockDim.x + 2 * threadIdx.x + value]++;
 
-
-        //TODO: also depth?
         if (useFlipping){
         value =  static_cast<int>(!(featureResponse2 <= threshold));
         assert(value == 0 || value == 1);
