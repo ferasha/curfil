@@ -436,12 +436,12 @@ std::vector<SplitFunction<PixelInstance, ImageFeatureFunction> > ImageFeatureEva
                    unsigned int index = bestFeat * configuration.getThresholds() * currentNode.getNumClasses() * 2;
                    index += bestThresh * currentNode.getNumClasses() * 2;
 
-                   std::stringstream strLeft;
-                   std::stringstream strRight;
-                    for (size_t label = 0; label < currentNode.getNumClasses(); label++) {
-                    	strLeft<<counters2[index + label * 2 + 0]<<",";
-                    	strRight<<counters2[index + label * 2 + 1]<<",";
-                    }
+               //    std::stringstream strLeft;
+               //    std::stringstream strRight;
+                //    for (size_t label = 0; label < currentNode.getNumClasses(); label++) {
+               //     	strLeft<<counters2[index + label * 2 + 0]<<",";
+               //     	strRight<<counters2[index + label * 2 + 1]<<",";
+               //     }
                  //   CURFIL_INFO("org histogram"<<currentNode.getHistogram());
                  //   CURFIL_INFO("left split "<<strLeft.str());
                  //   CURFIL_INFO("right split"<<strRight.str());
