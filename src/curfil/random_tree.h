@@ -330,17 +330,19 @@ public:
             const boost::shared_ptr<RandomTree<Instance, FeatureFunction> >& parent = boost::shared_ptr<
                     RandomTree<Instance, FeatureFunction> >()) :
             nodeId(nodeId), level(level), parent(parent), leaf(true), trainSamples(),
-                    numClasses(numClasses), histogram(numClasses), allPixelsHistogram(numClasses), timers(),
+                    numClasses(numClasses), histogram(numClasses),  allPixelsHistogram(numClasses), timers(),
                     split(), left(), right() {
 
         assert(histogram.ndim() == 1);
-        for (size_t label = 0; label < numClasses; label++) {
-            histogram[label] = 0;
-        }
 
         for (size_t label = 0; label < numClasses; label++) {
+            histogram[label] = 0;
             allPixelsHistogram[label] = 0;
         }
+
+  //      for (size_t label = 0; label < numClasses; label++) {
+   //         allPixelsHistogram[label] = 0;
+   //     }
 
         for (size_t i = 0; i < samples.size(); i++) {
             histogram[samples[i]->getLabel()] += samples[i]->getWeight();
@@ -432,11 +434,12 @@ public:
     }*/
 
   //  void collectLeafNodes(std::vector<const RandomTree<Instance, FeatureFunction>* >& leafSet) {
-    void collectLeafNodes(const std::vector<RandomTree<Instance, FeatureFunction> > &leafSet) {
-
+ //   void collectLeafNodes(const std::vector<RandomTree<Instance, FeatureFunction> > &leafSet) {
+    void collectLeafNodes(std::vector<size_t> &leafSet) {
     	if (isLeaf())
     	{
-       // 	leafSet.push_back(*this);
+        	//leafSet.push_back(*this);
+        	leafSet.push_back(this->getNodeId());
     	}
         else
         {
@@ -632,6 +635,13 @@ public:
     void setAllPixelsHistogram(size_t label, double value) {
 
         allPixelsHistogram[label] += value;
+    }
+
+    void updateHistograms()
+    {
+    	  for (size_t label = 0; label < numClasses; label++) {
+    	      histogram[label] = allPixelsHistogram[label];
+    	   }
     }
 
     const RandomTree<Instance, FeatureFunction>* traverseToLeaf(const Instance& instance) const {

@@ -81,7 +81,7 @@ RandomForestImage train(std::vector<LabeledRGBDImage>& images, size_t trees,
 
 
 
-
+/*
 
     bool onGPU = randomForest.getConfiguration().getAccelerationMode() == GPU_ONLY;
     bool useDepthImages = randomForest.getConfiguration().isUseDepthImages();
@@ -97,12 +97,13 @@ RandomForestImage train(std::vector<LabeledRGBDImage>& images, size_t trees,
     tbb::parallel_for(tbb::blocked_range<size_t>(0, images.size(), grainSize),
             [&](const tbb::blocked_range<size_t>& range) {
                 for(size_t imageNr = range.begin(); imageNr != range.end(); imageNr++) {
-                    cuv::ndarray<float, cuv::host_memory_space> probabilities;
-                    cuv::ndarray<size_t, cuv::host_memory_space> nodeOffsets;
+                 //   cuv::ndarray<size_t, cuv::host_memory_space> nodeOffsets;
                     const LabeledRGBDImage imagePair = images[imageNr];
-                    const RGBDImage& testImage = imagePair.getRGBDImage();
-                    LabelImage prediction(testImage.getWidth(), testImage.getHeight());
-                    prediction = randomForest.predict(testImage, &probabilities, onGPU, useDepthImages, &nodeOffsets);
+                    const RGBDImage& trainingImage = imagePair.getRGBDImage();
+                    const LabelImage& groundTruth = imagePair.getLabelImage();
+                    LabelImage prediction(trainingImage.getWidth(), trainingImage.getHeight());
+               //     prediction = randomForest.predict(testImage, &probabilities, onGPU, useDepthImages, &nodeOffsets);
+                    prediction = randomForest.improveHistograms(trainingImage, groundTruth, onGPU, useDepthImages);
 
                     //return an array where for each pixel position we know the node(id) it reached
                 	//access the random tree in the random forest and set the allpixelshistogram to the new acquired value
@@ -112,14 +113,8 @@ RandomForestImage train(std::vector<LabeledRGBDImage>& images, size_t trees,
 
 
 
-
-
-
-
-
-
-
-
+    randomForest.updateTreesHistograms();
+*/
 
 
     std::cout << randomForest;

@@ -61,10 +61,16 @@ public:
      * @param if not null, probabilities per class in a C×H×W matrix for C classes and an image of size W×H
      * @return prediction image which has the same size as 'image'
      */
+  //  LabelImage predict(const RGBDImage& image,
+ //           cuv::ndarray<float, cuv::host_memory_space>* prediction = 0,
+   //         const bool onGPU = true, bool useDepthImages = true,  cuv::ndarray<size_t, cuv::host_memory_space>* nodeOffsets = 0) const;
     LabelImage predict(const RGBDImage& image,
-            cuv::ndarray<float, cuv::host_memory_space>* prediction = 0,
-            const bool onGPU = true, bool useDepthImages = true,  cuv::ndarray<size_t, cuv::host_memory_space>* nodeOffsets = 0) const;
+              cuv::ndarray<float, cuv::host_memory_space>* prediction = 0,
+              const bool onGPU = true, bool useDepthImages = true) const;
 
+	LabelImage improveHistograms(const RGBDImage& trainingImage, const LabelImage& labelImage, const bool onGPU = true, bool useDepthImages  = true) const;
+
+	void updateTreesHistograms();
     /**
      * @return a recursive sum of per-feature type count
      */

@@ -209,7 +209,6 @@ BOOST_AUTO_TEST_CASE(testInformationGainScore) {
                 all, totalLeft, totalRight);
         BOOST_CHECK_CLOSE(score, 1.0, 1e-3);
     }
-
 }
 
 template<class T>
@@ -1109,7 +1108,7 @@ BOOST_AUTO_TEST_CASE(testRecallOnGPU) {
         image.calculateIntegral();
 
         {
-        	cuv::ndarray<size_t, cuv::dev_memory_space> nodeOffsets(
+        	cuv::ndarray<unsigned int, cuv::dev_memory_space> nodeOffsets(
         	    	    	                cuv::extents[image.getHeight()][image.getWidth()]);
 
             utils::Profile classifyImageTimer("classifyImage");
@@ -1118,6 +1117,7 @@ BOOST_AUTO_TEST_CASE(testRecallOnGPU) {
             cudaSafeCall(cudaMemset(output.ptr(), 0, static_cast<size_t>(output.size() * sizeof(float))));
 
             classifyImage(treeCacheSize, output, image, NUM_LABELS, treeData,true,nodeOffsets);
+           // classifyImage(treeCacheSize, output, image, NUM_LABELS, treeData,true);
         }
     }
 
