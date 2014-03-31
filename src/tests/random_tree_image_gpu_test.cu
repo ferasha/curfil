@@ -895,26 +895,20 @@ BOOST_AUTO_TEST_CASE(testColorFeatureManySamples) {
 
     RandomTree<PixelInstance, ImageFeatureFunction> node(0, 0, getPointers(samples), NUM_LABELS);
     cuv::ndarray<WeightType, cuv::dev_memory_space> histogram(node.getHistogram());
-
     {
         std::vector<std::vector<const PixelInstance*> > batches = featureFunction.prepare(getPointers(samples),
                 node, cuv::dev_memory_space(), false);
-
         ImageFeaturesAndThresholds<cuv::dev_memory_space> featuresAndThresholds =
                 featureFunction.generateRandomFeatures(batches[0], configuration.getRandomSeed(),
                         true, cuv::dev_memory_space());
-
         cuv::ndarray<WeightType, cuv::dev_memory_space> counters =
                 featureFunction.calculateFeatureResponsesAndHistograms(
                         node, batches, featuresAndThresholds);
-
         cuv::ndarray<ScoreType, cuv::host_memory_space> scores(
                 featureFunction.calculateScores(counters,
                         featuresAndThresholds, histogram));
-
         size_t scoreHash = checkScores(scores, NUM_FEAT, NUM_THRESH);
         size_t counterHash = checkCounters(configuration, counters, samples);
-
         // magic number. used to check for regressions
         BOOST_CHECK_EQUAL(4437303196209240250lu, counterHash);
         BOOST_CHECK_EQUAL(13702092111133522162lu, scoreHash);

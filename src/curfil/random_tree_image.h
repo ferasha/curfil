@@ -109,8 +109,8 @@ public:
      * @param x the x-coordinate of the pixel in the RGB-D image
      * @param y the y-coordinate of the pixel in the RGB-D image
      */
-    PixelInstance(const RGBDImage* image, const LabelType& label, uint16_t x, uint16_t y) :
-            image(image), label(label), point(x, y), depth(Depth::INVALID), useFlipping(false) {
+	PixelInstance(const RGBDImage* image, const LabelType& label, uint16_t x, uint16_t y, bool doHorizontalFlipping = false, WeightType weight = 1) :
+            image(image), label(label), point(x, y), depth(Depth::INVALID), useFlipping(doHorizontalFlipping), pixelWeight(1) {
         assert(image != NULL);
         assert(image->inImage(x, y));
         if (!image->hasIntegratedDepth()) {
@@ -144,8 +144,8 @@ public:
      * @param y the y-coordinate of the pixel in the RGB-D image
      */
     PixelInstance(const RGBDImage* image, const LabelType& label, const Depth& depth,
-            uint16_t x, uint16_t y) :
-            image(image), label(label), point(x, y), depth(depth), useFlipping(false) {
+            uint16_t x, uint16_t y, bool doHorizontalFlipping = false) :
+            image(image), label(label), point(x, y), depth(depth), useFlipping(doHorizontalFlipping), pixelWeight(1) {
         assert(image != NULL);
         assert(image->inImage(x, y));
         assert(depth.isValid());
@@ -304,7 +304,8 @@ public:
      * Currently not used and always returns 1.
      */
     WeightType getWeight() const {
-        return 1;
+       // return 1;
+       return pixelWeight;
     }
 
     /**
@@ -329,6 +330,7 @@ private:
     Point point;
     Depth depth;
     bool useFlipping;
+    WeightType pixelWeight;
 
     float getColor(const Point& pos, uint8_t channel) const {
         if (!inImage(pos)) {

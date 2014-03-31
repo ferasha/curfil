@@ -67,7 +67,6 @@ RandomForestImage train(std::vector<LabeledRGBDImage>& images, size_t trees,
     CURFIL_INFO(configuration);
 
     // Train
-
     RandomForestImage randomForest(trees, configuration);
 
     utils::Timer trainTimer;
@@ -77,7 +76,7 @@ RandomForestImage train(std::vector<LabeledRGBDImage>& images, size_t trees,
     CURFIL_INFO("training took " << trainTimer.format(2) <<
             " (" << std::setprecision(3) << trainTimer.getSeconds() / 60.0 << " min)");
 
-/*
+    /*
         bool onGPU = randomForest.getConfiguration().getAccelerationMode() == GPU_ONLY;
         bool useDepthImages = randomForest.getConfiguration().isUseDepthImages();
 
@@ -87,7 +86,7 @@ RandomForestImage train(std::vector<LabeledRGBDImage>& images, size_t trees,
         }
 
         //TODO get the correct histogram bias
-        randomForest.normalizeHistograms(0.0);
+     randomForest.normalizeHistograms(0.0);
 
         tbb::parallel_for(tbb::blocked_range<size_t>(0, images.size(), grainSize),
                 [&](const tbb::blocked_range<size_t>& range) {
@@ -96,7 +95,7 @@ RandomForestImage train(std::vector<LabeledRGBDImage>& images, size_t trees,
                         const RGBDImage& trainingImage = imagePair.getRGBDImage();
                         const LabelImage& groundTruth = imagePair.getLabelImage();
                         LabelImage prediction(trainingImage.getWidth(), trainingImage.getHeight());
-                        prediction = randomForest.improveHistograms(trainingImage, groundTruth, onGPU, useDepthImages);
+                        prediction = randomForest.improveHistograms(trainingImage, groundTruth, true,  useDepthImages);
                     }
         });
         randomForest.updateTreesHistograms();

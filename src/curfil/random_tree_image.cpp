@@ -361,7 +361,7 @@ std::vector<SplitFunction<PixelInstance, ImageFeatureFunction> > ImageFeatureEva
                         utils::Timer calculateScoresTimer;
 
                         cuv::ndarray<WeightType, cuv::dev_memory_space> histogram = currentNode.getHistogram();
-                        scoresGPU = calculateScores(counters, featuresAndThresholdsGPU, histogram);
+			scoresGPU = calculateScores(counters, featuresAndThresholdsGPU, histogram);
 
                         currentNode.setTimerValue("calculateScores", calculateScoresTimer);
 
@@ -803,6 +803,12 @@ std::vector<PixelInstance> RandomTreeImage::subsampleTrainingDataPixelUniform(
         size_t subsampleCount) const {
     // Random across imags type [0..(n-1)]
     auto rgen_image = randomSource.uniformSampler(trainLabelImages.size());
+    WeightType sum = 0;
+    for (size_t i=0; i<classLabelPriorDistribution.size(); i++)
+    {
+       sum += classLabelPriorDistribution[i];
+
+    }
 
     std::vector<PixelInstance> subsamples;
     for (size_t n = 0; n < subsampleCount * trainLabelImages.size(); ++n) {
@@ -826,9 +832,9 @@ std::vector<PixelInstance> RandomTreeImage::subsampleTrainingDataPixelUniform(
             if (shouldIgnoreLabel(label)) {
                 continue;
             }
-
+         
             // Append to sample list
-            subsamples.push_back(PixelInstance(&(trainLabelImages[image_id].getRGBDImage()), label, x, y));
+            subsamples.push_back(PixelInstance(&(trainLabelImages[image_id].getRGBDImage()), label, x, y, configuration.doHorizontalFlipping(), sum / classLabelPriorDistribution[label]));
             break;
         } while (true);
     }
@@ -874,10 +880,11 @@ std::vector<PixelInstance> RandomTreeImage::subsampleTrainingDataClassUniform(
     utils::Timer samplingTimer;
 
     size_t numLabels = classLabelPriorDistribution.size();
-
+    WeightType sum = 0;
     std::map<RGBColor, LabelType> colorLabelMap;
     for (LabelType label = 0; label < numLabels; label++) {
         colorLabelMap[LabelImage::decodeLabel(label)] = label;
+	sum += classLabelPriorDistribution[label];
     }
 
     for (const auto& color : configuration.getIgnoredColors()) {
@@ -946,7 +953,7 @@ std::vector<PixelInstance> RandomTreeImage::subsampleTrainingDataClassUniform(
                             continue;
                         }
 
-                        PixelInstance sample(&(trainLabelImages[imageNr].getRGBDImage()), label, x, y);
+                        PixelInstance sample(&(trainLabelImages[imageNr].getRGBDImage()), label, x, y, configuration.doHorizontalFlipping(), sum / classLabelPriorDistribution[label]);
                         if (!sample.getDepth().isValid()) {
                             continue;
                         }
