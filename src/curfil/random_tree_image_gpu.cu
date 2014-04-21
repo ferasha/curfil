@@ -1259,6 +1259,7 @@ __global__ void classifyKernel(
         int8_t region2Y = param2.w;
 
         FeatureResponseType featureResponse;
+	FeatureResponseType featureResponse2;
         switch (getType(currentNodeOffset, tree)) {
             case COLOR: {
                 ushort2 channels = getChannels(currentNodeOffset, tree);
@@ -1270,6 +1271,14 @@ __global__ void classifyKernel(
                         region2X, region2Y,
                         channels.x, channels.y,
                         x, y, depth);
+		featureResponse2 = calculateColorFeature(0,
+			imageWidth, imageHeight,
+			-offset1X, offset1Y,
+			-offset2X, offset2Y,
+			region1X, region1Y,
+			region2X, region2Y,
+			channels.x, channels.y,
+			x, y, depth);
             }
                 break;
             case DEPTH:
@@ -1286,9 +1295,19 @@ __global__ void classifyKernel(
 
         float threshold = getThreshold(currentNodeOffset, tree);
         assert(!isnan(threshold));
+	
+	int value = static_cast<int>(!(featureResponse <= threshold));
+  /*      if (!isnan(featureResponse) && !isnan(featureResponse2))
+	{
+		if (abs(featureResponse2 - threshold) > abs(featureResponse - threshold))
+			value = static_cast<int>(!(featureResponse2 <= threshold));
+	}
+	else
+		if(!isnan(featureResponse2))
+			value = static_cast<int>(!(featureResponse2 <= threshold));
 
-		int value = static_cast<int>(!(featureResponse <= threshold));
-        currentNodeOffset += leftNodeOffset + value;
+*/
+	currentNodeOffset += leftNodeOffset + value;
     }
 
 }
@@ -1646,13 +1665,13 @@ __global__ void aggregateHistogramsKernel(
     for (uint8_t label = 0; label < numLabels; label++) {
 
         // skip labels without samples
-        if (__syncthreads_or(labelFlags & (1 << label)) == 0) {  //this part sometimes causes problems but it's slower without it
+   /*     if (__syncthreads_or(labelFlags & (1 << label)) == 0) {  //this part sometimes causes problems but it's slower without it
             if (threadIdx.x < 2) {
                 counterShared[2 * label + threadIdx.x] = 0;
             }
             continue;
         }
-
+*/
         unsigned int idxA = (2 * label) * blockDim.x + threadIdx.x;
         for (unsigned int offset = blockDim.x; offset > 2; offset /= 2) {
 

@@ -87,15 +87,31 @@ public:
         /**
 	 * @return left or right branch for a given instance and feature function.
 	 */
-	SplitBranch split(const Instance& instance, bool& flippedSameSplit) const {
+	SplitBranch split(const Instance& instance, bool& flippedSameSplit, bool displayMessage = false) const {
 		bool value1 = feature.calculateFeatureResponse(instance) <= getThreshold();
-		flippedSameSplit = true;
+		int temp1 = static_cast<int>(!(feature.calculateFeatureResponse(instance) <= getThreshold()));
+		flippedSameSplit = false;
 		bool flipSetting = instance.getFlipping();
 		if (flipSetting) {
 			bool value2 = feature.calculateFeatureResponse(instance, true) <= getThreshold();
-			if (value1 != value2)
-				flippedSameSplit = false;
-		}
+			int temp2 = static_cast<int>(!(feature.calculateFeatureResponse(instance,true) <= getThreshold()));
+			if (temp1 == temp2)
+			{	flippedSameSplit = true;
+			/*	float resp1 = feature.calculateFeatureResponse(instance);
+				float resp2 = feature.calculateFeatureResponse(instance,true);
+				if (!isnan(resp1) && !isnan(resp2)) {
+				     if (abs(resp2 - getThreshold()) > abs(resp1 - getThreshold()))
+					value1 = value2;
+				}
+				else
+				 if (!isnan(resp2))
+						value1 = value2;
+
+*/
+			if (displayMessage)
+		CURFIL_INFO("response 1 "<<feature.calculateFeatureResponse(instance)<<", response 2 "<<feature.calculateFeatureResponse(instance,true)<<", threshold "<<getThreshold()<<", flippedSameSplit "<<flippedSameSplit);
+		}	
+	}
 		return ((value1) ? LEFT : RIGHT);
 	}
 
@@ -474,13 +490,17 @@ public:
             allPixelsHistogram[label] = 0;
         }
 
+	size_t flipped = 0;
+
         for (size_t i = 0; i < samples.size(); i++) {
             histogram[samples[i]->getLabel()] += samples[i]->getWeight();
             trainSamples.push_back(*samples[i]);
             if (samples[i]->getFlipping() == true) {
+		flipped += 1;
             	histogram[samples[i]->getLabel()] += samples[i]->getWeight();
             }
         }
+//	CURFIL_INFO("---nodeId "<<nodeId<<", samples "<<samples.size()<<", flipped "<<flipped);
     }
 
     /**
@@ -1182,7 +1202,8 @@ private:
                  leftRightStride,
                  allHistogramArray, totalLeft, totalRight);
          double diff = std::fabs(actualScore - bestSplit.getScore());
-        if (diff > 0.02) {
+      //  if (diff > 0.02) {
+	if (diff > 0){
              std::ostringstream o;
              o.precision(10);
              o << "actual score and best split score differ: " << diff << std::endl;
@@ -1256,6 +1277,8 @@ public:
             unsigned int rightFlipped = 0;
             unsigned int leftFlipped = 0;
 
+	    unsigned int off = 0;
+
             for (size_t sample = 0; sample < samples.size(); sample++) {
                 assert(samples[sample] != NULL);
                 bool flippedSameSplit;
@@ -1266,7 +1289,9 @@ public:
                 bool flipSetting = samples[sample]->getFlipping();
 
             	if (flipSetting && !flippedSameSplit)
-            		ptr->setFlipping(false);
+            	{	ptr->setFlipping(false);
+			off += 1;
+		}
 
             	allHistogram[samples[sample]->getLabel()] += samples[sample]->getWeight();
                 if (splitResult == LEFT) {
@@ -1279,7 +1304,8 @@ public:
 							leftHistogram[samples[sample]->getLabel()] += samples[sample]->getWeight();
 						else
 							{rightHistogram[samples[sample]->getLabel()] += samples[sample]->getWeight();
-							rightFlipped += 1;}
+							rightFlipped += 1;
+							samplesRight.push_back(ptr);}
 					}
                 } else {
                 	samplesRight.push_back(ptr);
@@ -1291,10 +1317,13 @@ public:
                 			rightHistogram[samples[sample]->getLabel()] += samples[sample]->getWeight();
                 		else
                 			{leftHistogram[samples[sample]->getLabel()] += samples[sample]->getWeight();
-                			 leftFlipped += 1;}
+                			 leftFlipped += 1;
+					 samplesLeft.push_back(ptr);}
                 	}
                 }
             }
+
+	  //  CURFIL_INFO("+++NodeId "<< currentNode->getNodeId()<<", samples "<<samples.size()<<", off "<<off<<", orgflipped "<<totalFlipped<<", nowflipped "<<totalFlipped-off);
 
             assert(samplesLeft.size() + samplesRight.size() == samples.size());
 
@@ -1327,6 +1356,12 @@ public:
                 CURFIL_ERROR("samplesLeft: " << samplesLeft.size());
                 CURFIL_ERROR("samplesRight: " << samplesRight.size());
                 CURFIL_ERROR("leftFlipped "<<leftFlipped<<" rightFlipped "<<rightFlipped<<" totalFlipped "<<totalFlipped)
+  for (size_t sample = 0; sample < samples.size(); sample++) {
+              //  assert(samples[sample] != NULL);
+                bool flippedSameSplit;
+                Instance* ptr = const_cast<Instance *>(samples[sample]);
+                SplitBranch splitResult = bestSplit.split(*ptr, flippedSameSplit, true);
+}
 
                 compareHistograms(allHistogram, leftHistogram, rightHistogram, bestSplit, numClasses);
 
